@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!--
 Copyright BRAINTRIBE TECHNOLOGY GMBH, Austria, 2002-2022
 This library is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public
@@ -10,7 +9,7 @@ You should have received a copy of the GNU Lesser General Public License along w
     <modelVersion>4.0.0</modelVersion>
     <groupId>tribefire.extension.jdbc.support</groupId>
     <artifactId>parent</artifactId>
-    <version>3.0.1</version>
+    <version>3.0.2</version>
     <packaging>pom</packaging>
     <properties>
         <java.version>17</java.version>
