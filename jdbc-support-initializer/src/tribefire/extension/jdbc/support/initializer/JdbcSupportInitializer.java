@@ -15,7 +15,6 @@ import com.braintribe.logging.Logger;
 import com.braintribe.model.jdbc.suppport.service.DatabaseInformation;
 import com.braintribe.model.jdbc.suppport.service.JdbcSupportRequest;
 import com.braintribe.model.meta.data.prompt.Outline;
-import com.braintribe.model.processing.meta.editor.BasicModelMetaDataEditor;
 import com.braintribe.model.processing.meta.editor.ModelMetaDataEditor;
 import com.braintribe.model.processing.session.api.collaboration.PersistenceInitializationContext;
 import com.braintribe.wire.api.module.WireTerminalModule;
@@ -60,9 +59,10 @@ public class JdbcSupportInitializer extends AbstractInitializer<JdbcSupportIniti
 	}
 
 	private void addMetaDataToModelsCommon(PersistenceInitializationContext context, JdbcSupportInitializerMainContract initializerMainContract) {
-		ModelMetaDataEditor modelEditor = BasicModelMetaDataEditor
-				.create(initializerMainContract.initializerModelsContract().configuredServiceModel()).withEtityFactory(context.getSession()::create)
-				.done();
+
+		ModelMetaDataEditor modelEditor = initializerMainContract.tfPlatform().modelApi()
+				.newMetaDataEditor(initializerMainContract.initializerModelsContract().configuredServiceModel()).done();
+
 		modelEditor.onEntityType(JdbcSupportRequest.T).addMetaData(initializerMainContract.initializerContract().serviceProcessWith());
 
 		Outline outline = context.getSession().create(Outline.T);

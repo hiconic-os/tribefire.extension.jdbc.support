@@ -14,6 +14,7 @@ package tribefire.extension.jdbc.support.initializer.wire.contract;
 import com.braintribe.wire.api.space.WireSpace;
 
 import tribefire.cortex.initializer.support.integrity.wire.contract.CoreInstancesContract;
+import tribefire.module.wire.contract.TribefirePlatformContract;
 
 /**
  * <p>
@@ -34,4 +35,7 @@ public interface JdbcSupportInitializerMainContract extends WireSpace {
 	CoreInstancesContract coreInstancesContract();
 
 	JdbcSupportInitializerMetaDataContract metadata();
+
+	TribefirePlatformContract tfPlatform();
+
 }

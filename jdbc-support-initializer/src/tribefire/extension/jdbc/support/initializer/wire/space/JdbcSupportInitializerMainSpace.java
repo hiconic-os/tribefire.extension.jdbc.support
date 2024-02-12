@@ -17,11 +17,12 @@ import com.braintribe.wire.api.annotation.Managed;
 import tribefire.cortex.initializer.support.integrity.wire.contract.CoreInstancesContract;
 import tribefire.cortex.initializer.support.wire.space.AbstractInitializerSpace;
 import tribefire.extension.jdbc.support.initializer.wire.contract.ExistingInstancesContract;
-import tribefire.extension.jdbc.support.initializer.wire.contract.JdbcSupportInitializerMetaDataContract;
 import tribefire.extension.jdbc.support.initializer.wire.contract.JdbcSupportInitializerContract;
 import tribefire.extension.jdbc.support.initializer.wire.contract.JdbcSupportInitializerMainContract;
+import tribefire.extension.jdbc.support.initializer.wire.contract.JdbcSupportInitializerMetaDataContract;
 import tribefire.extension.jdbc.support.initializer.wire.contract.JdbcSupportInitializerModelsContract;
 import tribefire.extension.jdbc.support.initializer.wire.contract.RuntimePropertiesContract;
+import tribefire.module.wire.contract.TribefirePlatformContract;
 
 /**
  * @see JdbcSupportInitializerMainContract
@@ -46,6 +47,9 @@ public class JdbcSupportInitializerMainSpace extends AbstractInitializerSpace im
 
 	@Import
 	private JdbcSupportInitializerMetaDataContract metadata;
+
+	@Import
+	private TribefirePlatformContract tfPlatform;
 
 	@Override
 	public JdbcSupportInitializerContract initializerContract() {
@@ -76,4 +80,10 @@ public class JdbcSupportInitializerMainSpace extends AbstractInitializerSpace im
 	public JdbcSupportInitializerMetaDataContract metadata() {
 		return metadata;
 	}
+
+	@Override
+	public TribefirePlatformContract tfPlatform() {
+		return tfPlatform;
+	}
+
 }
