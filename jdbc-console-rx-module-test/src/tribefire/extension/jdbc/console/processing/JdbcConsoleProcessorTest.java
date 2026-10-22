@@ -69,21 +69,24 @@ public class JdbcConsoleProcessorTest {
 	public void queriesTypedRowsAndReportsTruncation() throws Exception {
 		JdbcDataSource dataSource = database();
 		try (var connection = dataSource.getConnection(); var statement = connection.createStatement()) {
-			statement.execute("create table sample(id bigint, amount decimal(10,2), active boolean, title varchar(30))");
-			statement.execute("insert into sample values (1, 12.50, true, 'one'), (2, 8.25, false, 'two')");
+			statement.execute("create table sample(id bigint, amount decimal(10,2), active boolean, title varchar(30), email varchar(80))");
+			statement.execute("insert into sample values (1, 12.50, true, 'one', null), (2, 8.25, false, 'two', 'two@example.test')");
 		}
 
 		JdbcConsoleProcessor processor = processor(dataSource);
 		ExecuteJdbcQuery request = ExecuteJdbcQuery.T.create();
 		request.setDatabaseName("test-db");
-		request.setStatement("select id, amount, active, title from sample order by id");
+		request.setStatement("select id, amount, active, title, email from sample order by id");
 		request.setRowLimit(1);
 
 		var result = (tribefire.extension.jdbc.console.model.JdbcQueryResult) processor.process(context("jdbc-console-reader"), request);
 		assertThat(result.getColumns()).extracting(column -> column.getValueKind()).containsExactly(
-				JdbcValueKind.LONG, JdbcValueKind.DECIMAL, JdbcValueKind.BOOLEAN, JdbcValueKind.STRING);
+				JdbcValueKind.LONG, JdbcValueKind.DECIMAL, JdbcValueKind.BOOLEAN, JdbcValueKind.STRING, JdbcValueKind.STRING);
 		assertThat(result.getRows()).hasSize(1);
-		assertThat(result.getRows().get(0).getValues()).containsExactly(1L, new java.math.BigDecimal("12.50"), true, "one");
+		assertThat(result.getRows().get(0).getCells()).extracting(cell -> cell.getValue())
+				.containsExactly(1L, new java.math.BigDecimal("12.50"), true, "one", null);
+		assertThat(result.getRows().get(0).getCells()).extracting(cell -> cell.getNullValue())
+				.containsExactly(false, false, false, false, true);
 		assertThat(result.getTruncated()).isTrue();
 	}
 

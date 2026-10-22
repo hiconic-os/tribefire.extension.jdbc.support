@@ -1,5 +1,5 @@
 import { For, Show, createMemo, createSignal, onMount } from "solid-js";
-import type { JdbcColumn, JdbcQueryResult } from "@dev.hiconic/tf.extension.jdbc.support_jdbc-console-api-model";
+import type { JdbcCell, JdbcColumn, JdbcQueryResult, JdbcRow } from "@dev.hiconic/tf.extension.jdbc.support_jdbc-console-api-model";
 import { JdbcConsoleApi, type RuntimeConfig } from "./api";
 
 type Mode = "query" | "write";
@@ -56,8 +56,12 @@ export function App() {
 
   function handleError(caught: unknown) {
     const message = caught instanceof Error ? caught.message : String(caught);
-		if (runtimeConfig && isAuthenticationFailure(message))
-			redirectToLogin(runtimeConfig);
+    if (runtimeConfig) {
+      if (isAuthenticationFailure(message))
+        redirectToLogin(runtimeConfig);
+      else
+        setApi(new JdbcConsoleApi(runtimeConfig));
+    }
     setError(message);
   }
 
@@ -116,7 +120,7 @@ export function App() {
         <div class="result-content">
           <Show when={view() === "table"} fallback={<pre class="text-result">{textResult()}</pre>}>
             <div class="table-wrap"><table><thead><tr><For each={modeledArray<JdbcColumn>(queryResult().columns)}>{column => <th title={`${column.databaseTypeName} (${column.jdbcType})`}>{column.label || column.name}</th>}</For></tr></thead>
-            <tbody><For each={modeledArray<{ values: unknown }>(queryResult().rows)}>{row => <tr><For each={modeledArray<unknown>(row.values)}>{value => <td classList={{null: value == null}}>{display(value)}</td>}</For></tr>}</For></tbody></table></div>
+            <tbody><For each={modeledArray<JdbcRow>(queryResult().rows)}>{row => <tr><For each={modeledArray<JdbcCell>(row.cells)}>{cell => <td classList={{null: cell.nullValue}}>{displayCell(cell)}</td>}</For></tr>}</For></tbody></table></div>
           </Show>
         </div>
         <Show when={modeledArray<string>(queryResult().warnings).length}><div class="warnings"><For each={modeledArray<string>(queryResult().warnings)}>{warning => <div>{warning}</div>}</For></div></Show>
@@ -147,9 +151,13 @@ function display(value: unknown): string {
   return String(value);
 }
 
+function displayCell(cell: JdbcCell): string {
+  return cell.nullValue ? "NULL" : display(cell.value);
+}
+
 function renderText(result: JdbcQueryResult): string {
   const columns = modeledArray<JdbcColumn>(result.columns);
-  const rows = modeledArray<{ values: unknown }>(result.rows).map(row => modeledArray<unknown>(row.values).map(display));
+  const rows = resultRows(result).map(row => row.map(displayCell));
   const widths = columns.map((column, index) => Math.min(60, Math.max((column.label || column.name || "").length, ...rows.map(row => (row[index] ?? "").length))));
   const line = widths.map(width => "-".repeat(width + 2)).join("+");
   const renderRow = (values: string[]) => values.map((value, index) => ` ${clip(value, widths[index]).padEnd(widths[index])} `).join("|");
@@ -159,7 +167,7 @@ function renderText(result: JdbcQueryResult): string {
 function serializeResult(result: JdbcQueryResult, format: DownloadFormat): string {
   if (format === "txt") return renderText(result);
   const columns = modeledArray<JdbcColumn>(result.columns);
-  const rows = modeledArray<{ values: unknown }>(result.rows).map(row => modeledArray<unknown>(row.values));
+  const rows = resultRows(result);
   if (format === "json") return JSON.stringify({
     columns: columns.map(column => ({
       name: column.name,
@@ -168,14 +176,14 @@ function serializeResult(result: JdbcQueryResult, format: DownloadFormat): strin
       jdbcType: column.jdbcType,
       databaseTypeName: column.databaseTypeName
     })),
-    rows: rows.map(row => row.map(jsonValue)),
+    rows: rows.map(row => row.map(cell => cell.nullValue ? null : jsonValue(cell.value))),
     truncated: result.truncated,
     durationInMs: result.durationInMs,
     warnings: modeledArray<string>(result.warnings)
   }, null, 2);
   const separator = format === "csv" ? "," : "\t";
   const encode = (value: unknown) => delimitedValue(value, separator);
-  return [columns.map(column => encode(column.label || column.name)), ...rows.map(row => row.map(encode))]
+  return [columns.map(column => encode(column.label || column.name)), ...rows.map(row => row.map(cell => cell.nullValue ? "" : encode(cell.value)))]
     .map(row => row.join(separator)).join("\r\n");
 }
 
@@ -192,6 +200,10 @@ function jsonValue(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "bigint") return value.toString();
   return String(value);
+}
+
+function resultRows(result: JdbcQueryResult): JdbcCell[][] {
+  return modeledArray<JdbcRow>(result.rows).map(row => modeledArray<JdbcCell>(row.cells));
 }
 
 function fileNamePart(value: string) {

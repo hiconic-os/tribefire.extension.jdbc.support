@@ -47,16 +47,17 @@ import com.braintribe.model.processing.service.api.ServiceRequestContext;
 import com.braintribe.model.processing.service.common.context.UserSessionAspect;
 import com.braintribe.model.processing.service.impl.AbstractDispatchingServiceProcessor;
 import com.braintribe.model.processing.service.impl.DispatchConfiguration;
-import com.braintribe.model.record.ListRecord;
 import com.braintribe.model.usersession.UserSession;
 
 import hiconic.rx.db.model.configuration.Database;
 import hiconic.rx.db.module.api.DatabaseContract;
 import tribefire.extension.jdbc.console.model.JdbcColumn;
+import tribefire.extension.jdbc.console.model.JdbcCell;
 import tribefire.extension.jdbc.console.model.JdbcConsoleCapabilities;
 import tribefire.extension.jdbc.console.model.JdbcConsoleConfiguration;
 import tribefire.extension.jdbc.console.model.JdbcDatabase;
 import tribefire.extension.jdbc.console.model.JdbcQueryResult;
+import tribefire.extension.jdbc.console.model.JdbcRow;
 import tribefire.extension.jdbc.console.model.JdbcStatementResult;
 import tribefire.extension.jdbc.console.model.JdbcValueKind;
 import tribefire.extension.jdbc.console.model.api.ExecuteJdbcQuery;
@@ -170,18 +171,23 @@ public class JdbcConsoleProcessor extends AbstractDispatchingServiceProcessor<Jd
 		for (int index = 1; index <= count; index++)
 			columns.add(column(metadata, index));
 
-		List<ListRecord> rows = new ArrayList<>();
+		List<JdbcRow> rows = new ArrayList<>();
 		boolean truncated = false;
 		while (resultSet.next()) {
 			if (rows.size() == limit) {
 				truncated = true;
 				break;
 			}
-			List<Object> values = new ArrayList<>(count);
-			for (int index = 1; index <= count; index++)
-				values.add(value(resultSet, index, columns.get(index - 1).getValueKind()));
-			ListRecord row = ListRecord.T.create();
-			row.setValues(values);
+			List<JdbcCell> cells = new ArrayList<>(count);
+			for (int index = 1; index <= count; index++) {
+				Object value = value(resultSet, index, columns.get(index - 1).getValueKind());
+				JdbcCell cell = JdbcCell.T.create();
+				cell.setNullValue(value == null);
+				cell.setValue(value);
+				cells.add(cell);
+			}
+			JdbcRow row = JdbcRow.T.create();
+			row.setCells(cells);
 			rows.add(row);
 		}
 
