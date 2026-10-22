@@ -4,6 +4,7 @@ import { JdbcConsoleApi, type RuntimeConfig } from "./api";
 
 type Mode = "query" | "write";
 type View = "table" | "text";
+type DownloadFormat = "csv" | "tsv" | "json" | "txt";
 
 export function App() {
 	let runtimeConfig: RuntimeConfig | undefined;
@@ -15,6 +16,8 @@ export function App() {
   const [canWrite, setCanWrite] = createSignal(false);
   const [mode, setMode] = createSignal<Mode>("query");
   const [view, setView] = createSignal<View>("table");
+  const [downloadFormat, setDownloadFormat] = createSignal<DownloadFormat>("csv");
+  const [queryPaneHeight, setQueryPaneHeight] = createSignal(224);
   const [result, setResult] = createSignal<JdbcQueryResult>();
   const [status, setStatus] = createSignal("");
   const [error, setError] = createSignal("");
@@ -58,24 +61,67 @@ export function App() {
     setError(message);
   }
 
+  function beginResize(event: PointerEvent) {
+    event.preventDefault();
+    const startY = event.clientY;
+    const startHeight = queryPaneHeight();
+    const move = (moveEvent: PointerEvent) => {
+      const maximum = Math.max(180, window.innerHeight - 210);
+      setQueryPaneHeight(Math.min(maximum, Math.max(150, startHeight + moveEvent.clientY - startY)));
+    };
+    const finish = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", finish);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", finish);
+  }
+
+  function downloadResult() {
+    const queryResult = result();
+    if (!queryResult) return;
+    const format = downloadFormat();
+    const content = serializeResult(queryResult, format);
+    const mimeType = format === "json" ? "application/json" : format === "csv" ? "text/csv" : "text/plain";
+    const url = URL.createObjectURL(new Blob([content], { type: `${mimeType};charset=utf-8` }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${fileNamePart(database() || "query")}-${fileTimestamp()}.${format}`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url));
+  }
+
   return <main>
-    <header><div><span class="eyebrow">Database tools</span><h1>JDBC Console</h1></div><span class="state">{running() ? "Running…" : "Ready"}</span></header>
-    <section class="controls">
-      <label>Database<select value={database()} onInput={event => setDatabase(event.currentTarget.value)}><For each={databases()}>{name => <option value={name}>{name}</option>}</For></select></label>
-      <div class="mode"><button classList={{active: mode() === "query"}} onClick={() => setMode("query")}>Query</button><Show when={canWrite()}><button classList={{active: mode() === "write"}} onClick={() => setMode("write")}>Write</button></Show></div>
-      <Show when={mode() === "query"}><label class="limit">Limit<input type="number" min="1" value={rowLimit()} onInput={event => setRowLimit(Number(event.currentTarget.value))}/></label></Show>
+    <section class="query-pane" style={`height:${queryPaneHeight()}px`}>
+      <div class="controls">
+        <div class="branding"><span class="eyebrow">Database tools</span><strong>JDBC Console</strong></div>
+        <label>Database<select value={database()} onInput={event => setDatabase(event.currentTarget.value)}><For each={databases()}>{name => <option value={name}>{name}</option>}</For></select></label>
+        <div class="mode"><button classList={{active: mode() === "query"}} onClick={() => setMode("query")}>Query</button><Show when={canWrite()}><button classList={{active: mode() === "write"}} onClick={() => setMode("write")}>Write</button></Show></div>
+        <Show when={mode() === "query"}><label class="limit">Limit<input type="number" min="1" value={rowLimit()} onInput={event => setRowLimit(Number(event.currentTarget.value))}/></label></Show>
+        <span class="state">{running() ? "Running…" : "Ready"}</span>
+      </div>
+      <div class="editor"><textarea aria-label="SQL statement" spellcheck={false} value={statement()} onInput={event => setStatement(event.currentTarget.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") execute(); }}/><button class="execute" disabled={running() || !database()} onClick={execute}>Execute <kbd>Ctrl ↵</kbd></button></div>
     </section>
-    <section class="editor"><textarea spellcheck={false} value={statement()} onInput={event => setStatement(event.currentTarget.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") execute(); }}/><button class="execute" disabled={running() || !database()} onClick={execute}>Execute <kbd>Ctrl ↵</kbd></button></section>
-    <Show when={error()}><div class="error">{error()}</div></Show>
-    <Show when={status()}><div class="status">{status()}</div></Show>
-    <Show when={result()}>{queryResult => <section class="results">
-      <div class="resultbar"><div class="mode"><button classList={{active: view() === "table"}} onClick={() => setView("table")}>Table</button><button classList={{active: view() === "text"}} onClick={() => setView("text")}>Text</button></div><button class="copy" onClick={() => navigator.clipboard.writeText(textResult())}>Copy</button></div>
-      <Show when={view() === "table"} fallback={<pre class="text-result">{textResult()}</pre>}>
-        <div class="table-wrap"><table><thead><tr><For each={modeledArray<JdbcColumn>(queryResult().columns)}>{column => <th title={`${column.databaseTypeName} (${column.jdbcType})`}>{column.label || column.name}</th>}</For></tr></thead>
-        <tbody><For each={modeledArray<{ values: unknown }>(queryResult().rows)}>{row => <tr><For each={modeledArray<unknown>(row.values)}>{value => <td classList={{null: value == null}}>{display(value)}</td>}</For></tr>}</For></tbody></table></div>
-      </Show>
-      <Show when={modeledArray<string>(queryResult().warnings).length}><div class="warnings"><For each={modeledArray<string>(queryResult().warnings)}>{warning => <div>{warning}</div>}</For></div></Show>
-    </section>}</Show>
+    <div class="splitter" role="separator" aria-orientation="horizontal" aria-label="Resize statement and result areas" onPointerDown={beginResize}><span/></div>
+    <section class="results">
+      <div class="resultbar">
+        <div class="result-summary">
+          <Show when={result()}><div class="mode"><button classList={{active: view() === "table"}} onClick={() => setView("table")}>Table</button><button classList={{active: view() === "text"}} onClick={() => setView("text")}>Text</button></div></Show>
+          <Show when={status()}><span class="status">{status()}</span></Show>
+        </div>
+        <Show when={result()}><div class="result-actions"><button class="secondary" onClick={() => navigator.clipboard.writeText(textResult())}>Copy</button><select aria-label="Download format" value={downloadFormat()} onInput={event => setDownloadFormat(event.currentTarget.value as DownloadFormat)}><option value="csv">CSV</option><option value="tsv">TSV</option><option value="json">JSON</option><option value="txt">Formatted text</option></select><button class="secondary" onClick={downloadResult}>Download</button></div></Show>
+      </div>
+      <Show when={error()}><div class="error">{error()}</div></Show>
+      <Show when={result()} fallback={<div class="empty-result">Execute a query to inspect its result.</div>}>{queryResult => <>
+        <div class="result-content">
+          <Show when={view() === "table"} fallback={<pre class="text-result">{textResult()}</pre>}>
+            <div class="table-wrap"><table><thead><tr><For each={modeledArray<JdbcColumn>(queryResult().columns)}>{column => <th title={`${column.databaseTypeName} (${column.jdbcType})`}>{column.label || column.name}</th>}</For></tr></thead>
+            <tbody><For each={modeledArray<{ values: unknown }>(queryResult().rows)}>{row => <tr><For each={modeledArray<unknown>(row.values)}>{value => <td classList={{null: value == null}}>{display(value)}</td>}</For></tr>}</For></tbody></table></div>
+          </Show>
+        </div>
+        <Show when={modeledArray<string>(queryResult().warnings).length}><div class="warnings"><For each={modeledArray<string>(queryResult().warnings)}>{warning => <div>{warning}</div>}</For></div></Show>
+      </>}</Show>
+    </section>
   </main>;
 }
 
@@ -108,6 +154,52 @@ function renderText(result: JdbcQueryResult): string {
   const line = widths.map(width => "-".repeat(width + 2)).join("+");
   const renderRow = (values: string[]) => values.map((value, index) => ` ${clip(value, widths[index]).padEnd(widths[index])} `).join("|");
   return [renderRow(columns.map(column => column.label || column.name || "")), line, ...rows.map(renderRow)].join("\n");
+}
+
+function serializeResult(result: JdbcQueryResult, format: DownloadFormat): string {
+  if (format === "txt") return renderText(result);
+  const columns = modeledArray<JdbcColumn>(result.columns);
+  const rows = modeledArray<{ values: unknown }>(result.rows).map(row => modeledArray<unknown>(row.values));
+  if (format === "json") return JSON.stringify({
+    columns: columns.map(column => ({
+      name: column.name,
+      label: column.label,
+      valueKind: column.valueKind,
+      jdbcType: column.jdbcType,
+      databaseTypeName: column.databaseTypeName
+    })),
+    rows: rows.map(row => row.map(jsonValue)),
+    truncated: result.truncated,
+    durationInMs: result.durationInMs,
+    warnings: modeledArray<string>(result.warnings)
+  }, null, 2);
+  const separator = format === "csv" ? "," : "\t";
+  const encode = (value: unknown) => delimitedValue(value, separator);
+  return [columns.map(column => encode(column.label || column.name)), ...rows.map(row => row.map(encode))]
+    .map(row => row.join(separator)).join("\r\n");
+}
+
+function delimitedValue(value: unknown, separator: string): string {
+  if (value == null) return "";
+  const rendered = display(value);
+  if (separator === "," || rendered.includes(separator) || /["\r\n]/.test(rendered))
+    return `"${rendered.replaceAll('"', '""')}"`;
+  return rendered;
+}
+
+function jsonValue(value: unknown): unknown {
+  if (value == null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "bigint") return value.toString();
+  return String(value);
+}
+
+function fileNamePart(value: string) {
+  return value.replaceAll(/[^a-zA-Z0-9._-]+/g, "-").replaceAll(/^-+|-+$/g, "") || "query";
+}
+
+function fileTimestamp() {
+  return new Date().toISOString().replaceAll(/[:.]/g, "-");
 }
 
 function clip(value: string, width: number) {
