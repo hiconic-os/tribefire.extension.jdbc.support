@@ -1,0 +1,11 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent><groupId>tribefire.extension.jdbc.support</groupId><artifactId>parent</artifactId><version>[3.0,3.1)</version></parent>
+	<artifactId>jdbc-console-rx-module-test</artifactId><version>3.0.1</version>
+	<dependencies>
+		<dependency><groupId>com.braintribe.testing</groupId><artifactId>unit-test-deps</artifactId><version>${V.com.braintribe.testing}</version></dependency>
+		<dependency><groupId>com.braintribe.gm</groupId><artifactId>gm-core4-jvm</artifactId><version>${V.com.braintribe.gm}</version></dependency>
+		<dependency><groupId>tribefire.extension.jdbc.support</groupId><artifactId>jdbc-console-rx-module</artifactId><version>${V.tribefire.extension.jdbc.support}</version></dependency>
+		<dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.2.224</version></dependency>
+	</dependencies>
+</project>
