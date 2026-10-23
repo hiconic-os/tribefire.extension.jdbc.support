@@ -7,7 +7,11 @@
 	</parent>
 	<artifactId>jdbc-console-api-model</artifactId>
 	<version>3.0.6</version>
-	<properties><archetype>model</archetype></properties>
+	<properties>
+		<archetype>model</archetype>
+		<npmPackaging>model</npmPackaging>
+		<npmRegistryUrl>https://registry.npmjs.org</npmRegistryUrl>
+	</properties>
 	<dependencies>
 		<dependency><groupId>com.braintribe.gm</groupId><artifactId>root-model</artifactId><version>${V.com.braintribe.gm}</version></dependency>
 		<dependency><groupId>com.braintribe.gm</groupId><artifactId>service-api-model</artifactId><version>${V.com.braintribe.gm}</version></dependency>
