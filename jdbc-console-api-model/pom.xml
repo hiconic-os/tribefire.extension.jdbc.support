@@ -6,7 +6,7 @@
 		<version>[3.0,3.1)</version>
 	</parent>
 	<artifactId>jdbc-console-api-model</artifactId>
-	<version>3.0.4</version>
+	<version>3.0.5</version>
 	<properties><archetype>model</archetype></properties>
 	<dependencies>
 		<dependency><groupId>com.braintribe.gm</groupId><artifactId>root-model</artifactId><version>${V.com.braintribe.gm}</version></dependency>
