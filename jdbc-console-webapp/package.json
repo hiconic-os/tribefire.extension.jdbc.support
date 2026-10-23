@@ -7,7 +7,7 @@
   "dependencies": {
     "@dev.hiconic/gm_gm-core-api": "2.0.x",
     "@dev.hiconic/gm_security-reason-model": "2.0.x",
-    "@dev.hiconic/tf.extension.jdbc.support_jdbc-console-api-model": "file:../jdbc-console-api-model/dist/npm",
+    "@dev.hiconic/tf.extension.jdbc.support_jdbc-console-api-model": "3.0.x",
     "@dev.hiconic/runtime": "3.0.176",
     "@dev.hiconic/tf.js_hc-js-api": "3.0.15",
     "solid-js": "1.9.4"
