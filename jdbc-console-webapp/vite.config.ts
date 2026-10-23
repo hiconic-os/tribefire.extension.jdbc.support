@@ -21,7 +21,8 @@ export default defineConfig(({ command }) => {
       "@dev.hiconic/gm_gm-core-api": fromHere("node_modules/@dev.hiconic/gm_gm-core-api/dist/gm-core-api.js"),
       "@dev.hiconic/gm_root-model": fromHere("node_modules/@dev.hiconic/gm_root-model/dist/root-model.js"),
       "@dev.hiconic/gm_service-api-model": fromHere("node_modules/@dev.hiconic/gm_service-api-model/dist/service-api-model.js"),
-      "@dev.hiconic/gm_record-model": fromHere("node_modules/@dev.hiconic/gm_record-model/dist/record-model.js")
+      "@dev.hiconic/gm_record-model": fromHere("node_modules/@dev.hiconic/gm_record-model/dist/record-model.js"),
+      "@dev.hiconic/gm_security-reason-model": fromHere("node_modules/@dev.hiconic/gm_security-reason-model/dist/security-reason-model.js")
     }},
     server: { port: 5176, strictPort: true },
     build: {

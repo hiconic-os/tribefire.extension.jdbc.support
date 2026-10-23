@@ -9,6 +9,7 @@ type AccessState = "checking" | "authenticated" | "unauthenticated" | "denied" |
 
 export function App() {
 	let runtimeConfig: RuntimeConfig | undefined;
+	let accessRefreshInFlight: Promise<void> | undefined;
   const [api, setApi] = createSignal<JdbcConsoleApi>();
   const [databases, setDatabases] = createSignal<string[]>([]);
   const [database, setDatabase] = createSignal("");
@@ -58,6 +59,18 @@ export function App() {
   });
 
   async function refreshAccess(loadDatabases: boolean) {
+    if (accessRefreshInFlight)
+      return accessRefreshInFlight;
+
+    accessRefreshInFlight = doRefreshAccess(loadDatabases);
+    try {
+      await accessRefreshInFlight;
+    } finally {
+      accessRefreshInFlight = undefined;
+    }
+  }
+
+  async function doRefreshAccess(loadDatabases: boolean) {
     const client = api();
     if (!client) return;
     setAccessState("checking");
