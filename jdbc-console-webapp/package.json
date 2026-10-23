@@ -7,12 +7,12 @@
   "dependencies": {
     "@dev.hiconic/gm_gm-core-api": "2.0.x",
     "@dev.hiconic/tf.extension.jdbc.support_jdbc-console-api-model": "file:../jdbc-console-api-model/dist/npm",
-    "@dev.hiconic/runtime": "3.0.168",
+    "@dev.hiconic/runtime": "3.0.176",
     "@dev.hiconic/tf.js_hc-js-api": "3.0.15",
     "solid-js": "1.9.4"
   },
   "devDependencies": {
-    "@dev.hiconic/runtime-dev": "3.0.168",
+    "@dev.hiconic/runtime-dev": "3.0.176",
     "@types/node": "22.13.10",
     "typescript": "5.7.3",
     "vite": "6.2.2",

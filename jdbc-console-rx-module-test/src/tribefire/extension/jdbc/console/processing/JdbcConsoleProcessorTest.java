@@ -83,10 +83,8 @@ public class JdbcConsoleProcessorTest {
 		assertThat(result.getColumns()).extracting(column -> column.getValueKind()).containsExactly(
 				JdbcValueKind.LONG, JdbcValueKind.DECIMAL, JdbcValueKind.BOOLEAN, JdbcValueKind.STRING, JdbcValueKind.STRING);
 		assertThat(result.getRows()).hasSize(1);
-		assertThat(result.getRows().get(0).getCells()).extracting(cell -> cell.getValue())
+		assertThat(result.getRows().get(0).getValues())
 				.containsExactly(1L, new java.math.BigDecimal("12.50"), true, "one", null);
-		assertThat(result.getRows().get(0).getCells()).extracting(cell -> cell.getNullValue())
-				.containsExactly(false, false, false, false, true);
 		assertThat(result.getTruncated()).isTrue();
 	}
 

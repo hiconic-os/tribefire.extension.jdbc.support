@@ -18,6 +18,7 @@ import java.util.List;
 import com.braintribe.model.generic.GenericEntity;
 import com.braintribe.model.generic.reflection.EntityType;
 import com.braintribe.model.generic.reflection.EntityTypes;
+import com.braintribe.model.record.ListRecord;
 
 public interface JdbcQueryResult extends GenericEntity {
 	EntityType<JdbcQueryResult> T = EntityTypes.T(JdbcQueryResult.class);
@@ -25,8 +26,8 @@ public interface JdbcQueryResult extends GenericEntity {
 	List<JdbcColumn> getColumns();
 	void setColumns(List<JdbcColumn> columns);
 
-	List<JdbcRow> getRows();
-	void setRows(List<JdbcRow> rows);
+	List<ListRecord> getRows();
+	void setRows(List<ListRecord> rows);
 
 	boolean getTruncated();
 	void setTruncated(boolean truncated);
