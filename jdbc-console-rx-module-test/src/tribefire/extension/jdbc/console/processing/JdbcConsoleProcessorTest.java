@@ -37,11 +37,28 @@ import hiconic.rx.db.model.configuration.Database;
 import hiconic.rx.db.module.api.DatabaseContract;
 
 import tribefire.extension.jdbc.console.model.JdbcConsoleConfiguration;
+import tribefire.extension.jdbc.console.model.JdbcConsoleCapabilities;
 import tribefire.extension.jdbc.console.model.JdbcValueKind;
 import tribefire.extension.jdbc.console.model.api.ExecuteJdbcQuery;
 import tribefire.extension.jdbc.console.model.api.ExecuteJdbcStatement;
+import tribefire.extension.jdbc.console.model.api.GetJdbcConsoleCapabilities;
 
 public class JdbcConsoleProcessorTest {
+	@Test
+	public void reportsAnonymousAndRoleSpecificCapabilities() {
+		JdbcConsoleProcessor processor = processor(database());
+		GetJdbcConsoleCapabilities request = GetJdbcConsoleCapabilities.T.create();
+
+		JdbcConsoleCapabilities anonymous = (JdbcConsoleCapabilities) processor.process(anonymousContext(), request);
+		assertThat(anonymous.getAuthenticated()).isFalse();
+		assertThat(anonymous.getCanRead()).isFalse();
+		assertThat(anonymous.getCanWrite()).isFalse();
+
+		JdbcConsoleCapabilities reader = (JdbcConsoleCapabilities) processor.process(context("jdbc-console-reader"), request);
+		assertThat(reader.getAuthenticated()).isTrue();
+		assertThat(reader.getCanRead()).isTrue();
+		assertThat(reader.getCanWrite()).isFalse();
+	}
 	@Test
 	public void mapsJdbcTypesToStableModelKinds() {
 		assertThat(JdbcConsoleProcessor.valueKind(Types.BOOLEAN)).isEqualTo(JdbcValueKind.BOOLEAN);
@@ -120,6 +137,10 @@ public class JdbcConsoleProcessorTest {
 		session.setEffectiveRoles(Set.of(roles));
 		return new StandardServiceRequestContextBuilder((Evaluator<ServiceRequest>) null)
 				.set(UserSessionAspect.class, session).build();
+	}
+
+	private static ServiceRequestContext anonymousContext() {
+		return new StandardServiceRequestContextBuilder((Evaluator<ServiceRequest>) null).build();
 	}
 
 	private static JdbcDataSource database() {

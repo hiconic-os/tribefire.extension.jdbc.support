@@ -6,6 +6,7 @@
 		<dependency><groupId>hiconic.platform.reflex</groupId><artifactId>reflex-module-api</artifactId><version>${V.hiconic.platform.reflex}</version></dependency>
 		<dependency><groupId>hiconic.platform.reflex</groupId><artifactId>web-server-module-api</artifactId><version>${V.hiconic.platform.reflex}</version></dependency>
 		<dependency><groupId>hiconic.platform.reflex</groupId><artifactId>web-security-rx-module</artifactId><version>${V.hiconic.platform.reflex}</version></dependency>
+		<dependency><groupId>hiconic.platform.reflex</groupId><artifactId>web-security-module-api</artifactId><version>${V.hiconic.platform.reflex}</version></dependency>
 		<dependency><groupId>hiconic.platform.reflex</groupId><artifactId>web-rpc-server-rx-module</artifactId><version>${V.hiconic.platform.reflex}</version></dependency>
 		<dependency><groupId>tribefire.extension.jdbc.support</groupId><artifactId>jdbc-console-rx-module</artifactId><version>${V.tribefire.extension.jdbc.support}</version></dependency>
 		<dependency><groupId>tribefire.extension.jdbc.support</groupId><artifactId>jdbc-console-webapp</artifactId><version>${V.tribefire.extension.jdbc.support}</version><type>pom</type></dependency>

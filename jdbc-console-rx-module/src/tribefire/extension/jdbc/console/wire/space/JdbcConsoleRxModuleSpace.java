@@ -15,9 +15,6 @@ package tribefire.extension.jdbc.console.wire.space;
 
 import static com.braintribe.gm.model.reason.UnsatisfiedMaybeTunneling.getOrTunnel;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import com.braintribe.wire.api.annotation.Import;
 import com.braintribe.wire.api.annotation.Managed;
 
@@ -37,20 +34,9 @@ public class JdbcConsoleRxModuleSpace implements RxModuleContract {
 
 	@Override
 	public void configureServiceDomains(ServiceDomainConfigurations configurations) {
-		JdbcConsoleConfiguration config = configuration();
 		var domain = configurations.byId(JdbcConsoleConstants.SERVICE_DOMAIN);
 		domain.setDisplayName("JDBC Console");
-		domain.allowRoles(allRoles(config));
 		domain.bindRequest(JdbcConsoleRequest.T, this::processor);
-	}
-
-	private static Set<String> allRoles(JdbcConsoleConfiguration config) {
-		Set<String> result = new LinkedHashSet<>();
-		if (config.getReaderRoles() != null)
-			result.addAll(config.getReaderRoles());
-		if (config.getWriterRoles() != null)
-			result.addAll(config.getWriterRoles());
-		return result;
 	}
 
 	@Managed

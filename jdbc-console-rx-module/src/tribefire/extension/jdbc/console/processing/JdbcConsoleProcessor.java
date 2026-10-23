@@ -86,6 +86,7 @@ public class JdbcConsoleProcessor extends AbstractDispatchingServiceProcessor<Jd
 
 	private JdbcConsoleCapabilities capabilities(ServiceRequestContext context, GetJdbcConsoleCapabilities request) {
 		JdbcConsoleCapabilities result = JdbcConsoleCapabilities.T.create();
+		result.setAuthenticated(context.findOrNull(UserSessionAspect.class) != null);
 		result.setCanRead(hasAnyRole(context, readRoles()));
 		result.setCanWrite(hasAnyRole(context, writerRoles()));
 		return result;

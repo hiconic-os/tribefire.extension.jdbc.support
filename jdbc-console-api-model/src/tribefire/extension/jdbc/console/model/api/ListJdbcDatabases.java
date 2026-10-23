@@ -19,7 +19,7 @@ import com.braintribe.model.generic.reflection.EntityType;
 import com.braintribe.model.generic.reflection.EntityTypes;
 import com.braintribe.model.service.api.ServiceRequest;
 
-public interface ListJdbcDatabases extends JdbcConsoleRequest {
+public interface ListJdbcDatabases extends AuthorizedJdbcConsoleRequest {
 	EntityType<ListJdbcDatabases> T = EntityTypes.T(ListJdbcDatabases.class);
 
 	@Override

@@ -20,6 +20,9 @@ import com.braintribe.model.generic.reflection.EntityTypes;
 public interface JdbcConsoleCapabilities extends GenericEntity {
 	EntityType<JdbcConsoleCapabilities> T = EntityTypes.T(JdbcConsoleCapabilities.class);
 
+	boolean getAuthenticated();
+	void setAuthenticated(boolean authenticated);
+
 	boolean getCanRead();
 	void setCanRead(boolean canRead);
 

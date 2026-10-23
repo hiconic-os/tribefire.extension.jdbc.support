@@ -4,7 +4,7 @@ import {
 } from "@dev.hiconic/tf.extension.jdbc.support_jdbc-console-api-model";
 import { remote } from "@dev.hiconic/tf.js_hc-js-api";
 
-export interface RuntimeConfig { servicesUrl: string; }
+export interface RuntimeConfig { servicesUrl: string; loginUrl?: string; }
 
 export class JdbcConsoleApi {
   private readonly evaluator;

@@ -21,7 +21,7 @@ import com.braintribe.model.service.api.ServiceRequest;
 
 import tribefire.extension.jdbc.console.model.JdbcQueryResult;
 
-public interface ExecuteJdbcQuery extends JdbcConsoleRequest {
+public interface ExecuteJdbcQuery extends AuthorizedJdbcConsoleRequest {
 	EntityType<ExecuteJdbcQuery> T = EntityTypes.T(ExecuteJdbcQuery.class);
 
 	String getDatabaseName();

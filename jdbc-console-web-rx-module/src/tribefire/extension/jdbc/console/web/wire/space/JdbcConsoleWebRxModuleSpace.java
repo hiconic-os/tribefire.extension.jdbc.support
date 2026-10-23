@@ -25,6 +25,7 @@ import hiconic.rx.module.api.wire.RxModuleContract;
 import hiconic.rx.module.api.wire.RxPlatformContract;
 import hiconic.rx.web.server.api.WebAppNavigationEntry;
 import hiconic.rx.web.server.api.WebServerContract;
+import hiconic.rx.security.web.api.WebSecurityContract;
 import tribefire.extension.jdbc.console.model.JdbcConsoleConfiguration;
 
 @Managed
@@ -33,14 +34,20 @@ public class JdbcConsoleWebRxModuleSpace implements RxModuleContract {
 
 	@Import private WebServerContract webServer;
 	@Import private RxPlatformContract platform;
+	@Import private WebSecurityContract webSecurity;
 
 	@Override
 	public void onDeploy() {
-		webServer.addWebAppRuntimeConfiguration(WEBAPP_PATH, java.util.Map::of);
+		webServer.addWebAppRuntimeConfiguration(WEBAPP_PATH, () -> java.util.Map.of("loginUrl", loginUrl()));
 		Set<String> roles = visibleRoles();
 		if (!roles.isEmpty())
 			webServer.addWebAppNavigation(new WebAppNavigationEntry(WEBAPP_PATH, "JDBC Console",
 					"Inspect and, when authorized, modify configured databases.", roles, 110));
+	}
+
+	private String loginUrl() {
+		String path = webSecurity.defaultLoginPath();
+		return webServer.defaultEndpointUrl() + (path.startsWith("/") ? path : "/" + path);
 	}
 
 	private Set<String> visibleRoles() {

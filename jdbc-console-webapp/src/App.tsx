@@ -1,10 +1,11 @@
-import { For, Show, createMemo, createSignal, onMount } from "solid-js";
+import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import type { JdbcColumn, JdbcQueryResult } from "@dev.hiconic/tf.extension.jdbc.support_jdbc-console-api-model";
 import { JdbcConsoleApi, type RuntimeConfig } from "./api";
 
 type Mode = "query" | "write";
 type View = "table" | "text";
 type DownloadFormat = "csv" | "tsv" | "json" | "txt";
+type AccessState = "checking" | "authenticated" | "unauthenticated" | "denied" | "offline" | "error";
 
 export function App() {
 	let runtimeConfig: RuntimeConfig | undefined;
@@ -14,6 +15,9 @@ export function App() {
   const [statement, setStatement] = createSignal("select 1");
   const [rowLimit, setRowLimit] = createSignal(500);
   const [canWrite, setCanWrite] = createSignal(false);
+  const [canRead, setCanRead] = createSignal(false);
+  const [accessState, setAccessState] = createSignal<AccessState>("checking");
+  const [accessDetail, setAccessDetail] = createSignal("");
   const [mode, setMode] = createSignal<Mode>("query");
   const [view, setView] = createSignal<View>("table");
   const [downloadFormat, setDownloadFormat] = createSignal<DownloadFormat>("csv");
@@ -24,18 +28,64 @@ export function App() {
   const [running, setRunning] = createSignal(false);
   const textResult = createMemo(() => result() ? renderText(result()!) : "");
 
-  onMount(async () => {
+  onMount(() => void initialize());
+
+  async function initialize() {
+    setAccessState("checking");
     try {
       const config = await loadConfig();
       runtimeConfig = config;
       const client = new JdbcConsoleApi(config); setApi(client);
-      const capabilities = await client.capabilities();
-      setCanWrite(capabilities.canWrite);
-      const reflected = await client.databases();
-      const names = modeledArray<{ name: string }>(reflected.databases).map(item => item.name);
-      setDatabases(names); setDatabase(names[0] ?? "");
+      await refreshAccess(true);
     } catch (caught) { handleError(caught); }
+  }
+
+  function retryAccess() {
+    if (api()) void refreshAccess(databases().length === 0);
+    else void initialize();
+  }
+
+  const recheckAfterReturn = () => {
+    if (document.visibilityState === "visible") void refreshAccess(false);
+  };
+  onMount(() => {
+    window.addEventListener("focus", recheckAfterReturn);
+    document.addEventListener("visibilitychange", recheckAfterReturn);
   });
+  onCleanup(() => {
+    window.removeEventListener("focus", recheckAfterReturn);
+    document.removeEventListener("visibilitychange", recheckAfterReturn);
+  });
+
+  async function refreshAccess(loadDatabases: boolean) {
+    const client = api();
+    if (!client) return;
+    setAccessState("checking");
+    setAccessDetail("");
+    try {
+      const capabilities = await client.capabilities();
+      setCanRead(capabilities.canRead);
+      setCanWrite(capabilities.canWrite);
+      if (!capabilities.authenticated) {
+        setAccessState("unauthenticated");
+        return;
+      }
+      if (!capabilities.canRead) {
+        setAccessState("denied");
+        return;
+      }
+      setAccessState("authenticated");
+      setError("");
+      if (loadDatabases || databases().length === 0) {
+        const reflected = await client.databases();
+        const names = modeledArray<{ name: string }>(reflected.databases).map(item => item.name);
+        setDatabases(names);
+        if (!names.includes(database())) setDatabase(names[0] ?? "");
+      }
+    } catch (caught) {
+      applyAccessFailure(caught);
+    }
+  }
 
   async function execute() {
     const client = api();
@@ -57,12 +107,23 @@ export function App() {
   function handleError(caught: unknown) {
     const message = caught instanceof Error ? caught.message : String(caught);
     if (runtimeConfig) {
-      if (isAuthenticationFailure(message))
-        redirectToLogin(runtimeConfig);
+      if (isAuthenticationFailure(message) || isConnectivityFailure(message) || isAuthorizationFailure(message))
+        applyAccessFailure(caught);
       else
         setApi(new JdbcConsoleApi(runtimeConfig));
     }
     setError(message);
+  }
+
+  function applyAccessFailure(caught: unknown) {
+    const message = caught instanceof Error ? caught.message : String(caught);
+    setAccessDetail(message);
+    setCanRead(false);
+    setCanWrite(false);
+    if (isConnectivityFailure(message)) setAccessState("offline");
+    else if (isAuthorizationFailure(message)) setAccessState("denied");
+    else if (isAuthenticationFailure(message)) setAccessState("unauthenticated");
+    else setAccessState("error");
   }
 
   function beginResize(event: PointerEvent) {
@@ -95,14 +156,14 @@ export function App() {
     window.setTimeout(() => URL.revokeObjectURL(url));
   }
 
-  return <main>
+  return <><main classList={{masked: accessState() !== "authenticated"}}>
     <section class="query-pane" style={`height:${queryPaneHeight()}px`}>
       <div class="controls">
         <div class="branding"><span class="eyebrow">Database tools</span><strong>JDBC Console</strong></div>
         <label>Database<select value={database()} onInput={event => setDatabase(event.currentTarget.value)}><For each={databases()}>{name => <option value={name}>{name}</option>}</For></select></label>
         <div class="mode"><button classList={{active: mode() === "query"}} onClick={() => setMode("query")}>Query</button><Show when={canWrite()}><button classList={{active: mode() === "write"}} onClick={() => setMode("write")}>Write</button></Show></div>
         <Show when={mode() === "query"}><label class="limit">Limit<input type="number" min="1" value={rowLimit()} onInput={event => setRowLimit(Number(event.currentTarget.value))}/></label></Show>
-        <span class="state">{running() ? "Running…" : "Ready"}</span>
+        <span class="state">{running() ? "Running…" : canRead() ? (canWrite() ? "Read · Write" : "Read only") : "Checking access"}</span>
       </div>
       <div class="editor"><textarea aria-label="SQL statement" spellcheck={false} value={statement()} onInput={event => setStatement(event.currentTarget.value)} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") execute(); }}/><button class="execute" disabled={running() || !database()} onClick={execute}>Execute <kbd>Ctrl ↵</kbd></button></div>
     </section>
@@ -126,7 +187,8 @@ export function App() {
         <Show when={modeledArray<string>(queryResult().warnings).length}><div class="warnings"><For each={modeledArray<string>(queryResult().warnings)}>{warning => <div>{warning}</div>}</For></div></Show>
       </>}</Show>
     </section>
-  </main>;
+  </main><Show when={accessState() !== "authenticated"}><AccessOverlay state={accessState()} detail={accessDetail()}
+      loginUrl={runtimeConfig ? loginUrl(runtimeConfig) : undefined} retry={retryAccess}/></Show></>;
 }
 
 async function loadConfig(): Promise<RuntimeConfig> {
@@ -135,14 +197,40 @@ async function loadConfig(): Promise<RuntimeConfig> {
   return response.json();
 }
 
-function redirectToLogin(config: RuntimeConfig) {
-  const loginUrl = new URL(`${config.servicesUrl.replace(/\/$/, "")}/login`, window.location.origin);
-  loginUrl.searchParams.set("continue", `${window.location.pathname}${window.location.search}${window.location.hash}`);
-  window.location.replace(loginUrl);
+function loginUrl(config: RuntimeConfig) {
+  const url = new URL(config.loginUrl ?? `${config.servicesUrl.replace(/\/$/, "")}/login`, window.location.origin);
+  url.searchParams.set("continue", `${window.location.pathname}${window.location.search}${window.location.hash}`);
+  return url.toString();
 }
 
 function isAuthenticationFailure(message: string) {
   return /MissingSession|MissingCredentials|AuthenticationFailure|SessionNotFound|No authenticated web session|Unauthorized|401/i.test(message);
+}
+
+function isAuthorizationFailure(message: string) {
+  return /Forbidden|Insufficient.*role|required role|403/i.test(message);
+}
+
+function isConnectivityFailure(message: string) {
+  return /Failed to fetch|NetworkError|Network request failed|Load failed|timeout|HTTP 50[234]/i.test(message);
+}
+
+function AccessOverlay(props: { state: AccessState; detail: string; loginUrl?: string; retry: () => void }) {
+  const title = () => props.state === "checking" ? "Checking access…"
+    : props.state === "offline" ? "Connection interrupted"
+    : props.state === "denied" ? "Access denied"
+    : props.state === "error" ? "Access check failed"
+    : "Session required";
+  const explanation = () => props.state === "offline" ? "The server cannot currently be reached. Your work remains in this browser."
+    : props.state === "denied" ? "Your session is valid, but it has no JDBC Console reader role."
+    : props.state === "error" ? "The server returned an unexpected error while checking access."
+    : props.state === "unauthenticated" ? "Sign in to use the JDBC Console. Your current input remains available."
+    : "Verifying session and capabilities.";
+  return <div class="access-overlay" role="dialog" aria-live="polite"><div class="access-card"><strong>{title()}</strong><p>{explanation()}</p>
+    <Show when={props.detail && props.state !== "checking"}><small>{props.detail}</small></Show>
+    <div class="access-actions"><Show when={props.state === "offline" || props.state === "error"}><button onClick={props.retry}>Try again</button></Show>
+      <Show when={props.state === "unauthenticated" && props.loginUrl}><a class="login" href={props.loginUrl}>Sign in</a></Show></div>
+  </div></div>;
 }
 
 function display(value: unknown): string {

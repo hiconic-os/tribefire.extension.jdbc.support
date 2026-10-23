@@ -16,9 +16,9 @@ package tribefire.extension.jdbc.console.model.api;
 import com.braintribe.model.generic.annotation.Abstract;
 import com.braintribe.model.generic.reflection.EntityType;
 import com.braintribe.model.generic.reflection.EntityTypes;
-import com.braintribe.model.service.api.AuthorizedRequest;
+import com.braintribe.model.service.api.AuthorizableRequest;
 
 @Abstract
-public interface JdbcConsoleRequest extends AuthorizedRequest {
+public interface JdbcConsoleRequest extends AuthorizableRequest {
 	EntityType<JdbcConsoleRequest> T = EntityTypes.T(JdbcConsoleRequest.class);
 }
